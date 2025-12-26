@@ -14,9 +14,9 @@ public class CloudinaryConfig {
 	@Bean
 	public Cloudinary cloudinary() {
 		Map<String, String> config = new HashMap<>();
-		config.put("cloud_name", "daehhtffp");
-		config.put("api_key", "413187787635319");
-		config.put("api_secret", "ef6FhqBD2ygJ4EFGX4qdpnOt7RA");
+		config.put("cloud_name", "cloudname");
+		config.put("api_key", "11111");
+		config.put("api_secret", "xxxxx");
 		
 		return new Cloudinary(config);
 	}
