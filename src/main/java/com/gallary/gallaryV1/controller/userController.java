@@ -1,6 +1,8 @@
 package com.gallary.gallaryV1.controller;
 
+import java.io.IOException;
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
@@ -15,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.gallary.gallaryV1.model.FileDetails;
+import com.gallary.gallaryV1.repository.FileRepository;
 import com.gallary.gallaryV1.service.FileService;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -69,30 +72,36 @@ public class userController {
 	// Get One file details form the storage.
 	@GetMapping("/{id}")
 	public ResponseEntity<FileDetails> getFileDetails(@PathVariable int id) {
-
-		return fileService.getFileDetailsById(id).map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
+		return ResponseEntity.ok(fileService.getFileDetailsById(id));
 	}
 
 	// Download the one file from the storage.
 	@GetMapping("/download/{id}")
-	public ResponseEntity<Resource> downlodFile(@PathVariable int id) {
+	public ResponseEntity<Void> downlodFile(@PathVariable int id) {
 
-		try {
-			Resource resource = fileService.downloadFile(id);
-
-			return ResponseEntity.ok()
-					.header("Content-Disposition", "attachment; filename=\"" + resource.getFilename() + "\"")
-					.body(resource);
-
-		} catch (Exception e) {
-			// TODO: handle exception
-			return ResponseEntity.notFound().build();
-		}
+//		try {
+//			Resource resource = fileService.downloadFile(id);
+//
+//			return ResponseEntity.ok()
+//					.header("Content-Disposition", "attachment; filename=\"" + resource.getFilename() + "\"")
+//					.body(resource);
+//
+//		} catch (Exception e) {
+//			// TODO: handle exception
+//			return ResponseEntity.notFound().build();
+//		}
+		
+		FileDetails file = fileService.getFileDetailsById(id);
+		
+		return ResponseEntity
+				.status(302)
+				.header("Location", file.getFilePath())
+				.build();
 	}
 	
 	// To delete specific file
 	@DeleteMapping("/delete/{id}")
-	public ResponseEntity<Void> deleteFile(@PathVariable int id) {
+	public ResponseEntity<Void> deleteFile(@PathVariable int id) throws IOException {
 	    fileService.deleteFile(id);
 	    return ResponseEntity.noContent().build();
 	}
