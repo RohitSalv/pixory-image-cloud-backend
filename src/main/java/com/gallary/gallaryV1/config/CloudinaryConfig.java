@@ -19,11 +19,13 @@ public class CloudinaryConfig{
 	
 	@Bean
 	public Cloudinary cloudinary() {
+		
 		Map<String, String> config = new HashMap<>();
+		
 		config.put("cloud_name", props.getCloudName());
         config.put("api_key", props.getApiKey());
         config.put("api_secret", props.getApiSecret());
-		
+        
 		return new Cloudinary(config);
 	}
 
