@@ -9,14 +9,20 @@ import org.springframework.context.annotation.Configuration;
 import com.cloudinary.Cloudinary;
 
 @Configuration
-public class CloudinaryConfig {
+public class CloudinaryConfig{
+	
+	private CloudinaryProperties props;
+	
+	  public CloudinaryConfig(CloudinaryProperties props) {
+	        this.props = props;
+	    }
 	
 	@Bean
 	public Cloudinary cloudinary() {
 		Map<String, String> config = new HashMap<>();
-		config.put("cloud_name", "daehhtffp");
-		config.put("api_key", "413187787635319");
-		config.put("api_secret", "ef6FhqBD2ygJ4EFGX4qdpnOt7RA");
+		config.put("cloud_name", props.getCloudName());
+        config.put("api_key", props.getApiKey());
+        config.put("api_secret", props.getApiSecret());
 		
 		return new Cloudinary(config);
 	}

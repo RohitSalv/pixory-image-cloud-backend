@@ -32,5 +32,8 @@ build/
 ### VS Code ###
 .vscode
 
-CloudinaryConfig.java
+.env
+application-local.properties
+application-dev.properties
+
 
