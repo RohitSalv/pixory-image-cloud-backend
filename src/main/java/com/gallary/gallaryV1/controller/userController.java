@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -14,6 +15,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.gallary.gallaryV1.model.FileDetails;
@@ -27,6 +30,13 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 @RestController
 @RequestMapping("/api/v1/files")
 public class userController {
+	
+	@Value("${gemini.api.key}")
+    private String apiKey;
+	
+	private final RestTemplate restTemplate = new RestTemplate();
+
+	
 
 	@Autowired
 	private final FileService fileService;
@@ -106,5 +116,14 @@ public class userController {
 	    return ResponseEntity.noContent().build();
 	}
 
+	@GetMapping("/test-gemini")
+	public String testConnection() {
+	    String url = "https://generativelanguage.googleapis.com/v1beta/models?key=" + apiKey;
+	    try {
+	        return restTemplate.getForObject(url, String.class);
+	    } catch (Exception e) {
+	        return "Connection Failed: " + e.getMessage();
+	    }
+	}
 
 }

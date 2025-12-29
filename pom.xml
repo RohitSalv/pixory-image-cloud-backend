@@ -78,6 +78,23 @@
    			<version>1.37.0</version>
 		</dependency>
 
+		<!-- For REST calls -->
+		<dependency>
+    		<groupId>org.springframework.boot</groupId>
+    		<artifactId>spring-boot-starter-web</artifactId>
+		</dependency>
+
+		<!-- JSON handling -->
+		<dependency>
+    		<groupId>com.fasterxml.jackson.core</groupId>
+    		<artifactId>jackson-databind</artifactId>
+		</dependency>
+		
+		<dependency>
+    		<groupId>net.coobird</groupId>
+    		<artifactId>thumbnailator</artifactId>
+    		<version>0.4.20</version>
+		</dependency>
 
 	</dependencies>
 

@@ -6,6 +6,7 @@ import java.net.MalformedURLException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -16,7 +17,12 @@ import org.springframework.core.io.UrlResource;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import net.coobird.thumbnailator.Thumbnails;
+import java.io.ByteArrayOutputStream;
+
+
 import com.cloudinary.Cloudinary;
+import com.gallary.gallaryV1.dto.GeminiResult;
 import com.gallary.gallaryV1.model.FileDetails;
 import com.gallary.gallaryV1.repository.FileRepository;
 
@@ -31,55 +37,61 @@ public class FileService {
     @Autowired
     private final FileRepository fileRepository ;
     
-    public FileService(FileRepository fileRepository) {
+    @Autowired
+    private final GeminiService geminiService;
+    
+    public FileService(FileRepository fileRepository, GeminiService geminiService) {
     	this.fileRepository = fileRepository;
+		this.geminiService = geminiService;
     }
 
-    public FileDetails uploadFile(MultipartFile file) {
+    
 
-//        // create folder if not exists
-//        File directory = new File(UPLOAD_DIR);
-//        if (!directory.exists()) {
-//            directory.mkdirs();
-//        }
-//
-//        // save file to laptop
-//        String filePath = UPLOAD_DIR + file.getOriginalFilename();
-//        file.transferTo(new File(filePath));
-//
-//        // save details to DB
-//        FileDetails details = new FileDetails();
-//        details.setFileName(file.getOriginalFilename());
-//        details.setFilePath(filePath);
-//        details.setUploadTime(LocalDateTime.now());
-//        
-//        return fileRepository.save(details);
-    	
-    	try {
-			Map uploadResult = cloudinary.uploader().upload(
-					file.getBytes(),
-					Map.of(
-							"folder","gallary",
-							"resource_type","auto"
-							)
-			);
-			
-			FileDetails fileDetails = new FileDetails();
-			fileDetails.setFileName(file.getOriginalFilename());
-			fileDetails.setFilePath(uploadResult.get("secure_url").toString());
-			fileDetails.setPublicId(uploadResult.get("public_id").toString());
-			fileDetails.setResourceType(uploadResult.get("resource_type").toString());
-			fileDetails.setUploadTime(LocalDateTime.now());
-			
-			return fileRepository.save(fileDetails);
-			
-		} catch (Exception e) {
-			// TODO: handle exception
-			throw new RuntimeException("Cloudinary upload failed",e);
-		}
-    	
-    	
-    }
+        public FileDetails uploadFile(MultipartFile file) {
+            try {
+                byte[] originalBytes = file.getBytes();
+
+                // 1. Upload Original to Cloudinary (Full Quality)
+                Map uploadResult = cloudinary.uploader().upload(originalBytes, Map.of("folder", "gallery"));
+
+                // 2. Prepare Optimized Version for Gemini (Reduced size to save quota)
+                byte[] aiBytes = resizeImageForAI(originalBytes);
+                
+                GeminiResult aiResult;
+                try {
+                    aiResult = geminiService.analyzeImage(aiBytes);
+                } catch (Exception e) {
+                    // Fallback if AI is down or quota is still full
+                    aiResult = new GeminiResult("Description pending", List.of("uploaded"));
+                }
+
+                // 3. Save to DB
+                FileDetails fileDetails = new FileDetails();
+                fileDetails.setFileName(file.getOriginalFilename());
+                fileDetails.setFilePath(uploadResult.get("secure_url").toString());
+                fileDetails.setPublicId(uploadResult.get("public_id").toString());
+                fileDetails.setResourceType(uploadResult.get("resource_type").toString());
+                fileDetails.setDescription(aiResult.getDescription());
+                fileDetails.setTags(aiResult.getTags());
+                fileDetails.setUploadTime(LocalDateTime.now());
+
+                return fileRepository.save(fileDetails);
+
+            } catch (Exception e) {
+                throw new RuntimeException("Media processing failed", e);
+            }
+        }
+
+        private byte[] resizeImageForAI(byte[] originalBytes) throws IOException {
+            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+            // Resize to max 1024px while maintaining aspect ratio
+            Thumbnails.of(new java.io.ByteArrayInputStream(originalBytes))
+                    .size(1024, 1024) 
+                    .outputFormat("jpg")
+                    .toOutputStream(outputStream);
+            return outputStream.toByteArray();
+        }
+    
     
     // Get All file data
     public List<FileDetails> getAllFiles(){
@@ -121,5 +133,23 @@ public class FileService {
         
         fileRepository.delete(file); // OR mark status=DELETED
     }
+    
+    private String extractDescription(Map uploadResult) {
+        try {
+            Map info = (Map) uploadResult.get("info");
+            if (info == null) return null;
+
+            Map detection = (Map) info.get("detection");
+            if (detection == null) return null;
+
+            List<Map> captions = (List<Map>) detection.get("captioning");
+            if (captions == null || captions.isEmpty()) return null;
+
+            return captions.get(0).get("caption").toString();
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
 
 }
