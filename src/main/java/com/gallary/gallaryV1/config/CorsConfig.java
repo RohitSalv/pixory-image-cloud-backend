@@ -9,7 +9,7 @@ public class CorsConfig implements WebMvcConfigurer {
 	
 	public void addCorsMappings(CorsRegistry registry) {
 		registry.addMapping("/api/**")
-				.allowedOrigins("http://localhost:4200")
+				.allowedOrigins("http://localhost:4200","https://pixory-three.vercel.app")
 				.allowedMethods("GET","POST","PUT","DELETE","OPTIONS")
 				.allowedHeaders("*")
 				.allowCredentials(true);
