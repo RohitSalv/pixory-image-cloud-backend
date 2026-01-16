@@ -6,12 +6,20 @@ import java.util.List;
 import java.util.Map;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.cloudinary.Cloudinary;
+import com.gallary.gallaryV1.dto.FileResponse;
 import com.gallary.gallaryV1.dto.GeminiResult;
 import com.gallary.gallaryV1.model.FileDetails;
+import com.gallary.gallaryV1.model.User;
 import com.gallary.gallaryV1.repository.FileRepository;
+import com.gallary.gallaryV1.repository.UserRepository;
+import com.gallary.gallaryV1.security.AuthUtil;
+
+
+
 
 @Service
 public class FileService {
@@ -20,20 +28,29 @@ public class FileService {
     private final FileRepository fileRepository;
     private final GeminiService geminiService;
     private final ImageProcessor imageProcessor;
+	private final AuthUtil authUtil;
+	private final UserRepository userRepository;
 
     public FileService(
             Cloudinary cloudinary,
             FileRepository fileRepository,
             GeminiService geminiService,
-            ImageProcessor imageProcessor) {
+            ImageProcessor imageProcessor,
+            AuthUtil authUtil,
+            UserRepository userRepository) {
 
         this.cloudinary = cloudinary;
         this.fileRepository = fileRepository;
         this.geminiService = geminiService;
         this.imageProcessor = imageProcessor;
+        this.authUtil = authUtil;
+        this.userRepository = userRepository;
     }
 
-    public FileDetails uploadFile(MultipartFile file) {
+    @Transactional
+    public FileResponse uploadFile(MultipartFile file) {
+        int userId = authUtil.getCurrentUserId();
+        User user = userRepository.getReferenceById(userId);
 
         validateFile(file);
 
@@ -46,37 +63,58 @@ public class FileService {
             GeminiResult aiResult = analyzeWithFallback(originalBytes);
 
             FileDetails details = buildFileDetails(file, uploadResult, aiResult);
-            return fileRepository.save(details);
+            details.setUser(user);
+
+            FileDetails saved = fileRepository.save(details);
+
+            return mapToDto(saved);
 
         } catch (IOException e) {
             throw new RuntimeException("File upload failed");
         }
     }
 
-    public List<FileDetails> getAllFiles() {
-        return fileRepository.findAll();
+   
+    
+    @Transactional(readOnly = true)
+    public List<FileResponse> getMyFiles() {
+        int userId = authUtil.getCurrentUserId();
+
+        return fileRepository.findByUser_Id(userId)
+                .stream()
+                .map(this::mapToDto)
+                .toList();
     }
 
-    public FileDetails getFileDetailsById(int id) {
-        return fileRepository.findById(id)
+
+    private FileResponse mapToDto(FileDetails file) {
+        FileResponse dto = new FileResponse();
+        dto.setId(file.getId());
+        dto.setFileName(file.getFileName());
+        dto.setFilePath(file.getFilePath());
+        dto.setPublicId(file.getPublicId());
+        dto.setResourceType(file.getResourceType());
+        dto.setDescription(file.getDescription());
+        dto.setTags(file.getTags());
+        return dto;
+    }
+
+    public FileDetails getFileDetailsById(int id, User user) {
+        return fileRepository.findByIdAndUser_Id(id, user.getId())
                 .orElseThrow(() -> new RuntimeException("File not found"));
     }
 
-    public String getFileUrl(int id) {
-        return getFileDetailsById(id).getFilePath();
-    }
+    
+    public void deleteFile(int id, User user) {
 
-    public void deleteFile(int id) {
-        FileDetails file = getFileDetailsById(id);
+        FileDetails file = getFileDetailsById(id, user);
 
         try {
             cloudinary.uploader().destroy(
                     file.getPublicId(),
                     Map.of("resource_type", file.getResourceType())
             );
-        } catch (Exception ignored) {
-            // Cloudinary cleanup failure shouldn't block DB delete
-        }
+        } catch (Exception ignored) {}
 
         fileRepository.delete(file);
     }

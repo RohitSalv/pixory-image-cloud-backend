@@ -6,10 +6,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.gallary.gallaryV1.dto.FileResponse;
 import com.gallary.gallaryV1.model.FileDetails;
+import com.gallary.gallaryV1.security.SecurityUtil;
 import com.gallary.gallaryV1.service.FileService;
-
-import io.swagger.v3.oas.annotations.Operation;
 
 @RestController
 @RequestMapping("/api/v1/files")
@@ -21,40 +21,27 @@ public class FileController {
         this.fileService = fileService;
     }
 
-    @Operation(summary = "Health check")
-    @GetMapping("/hello")
-    public String helloUser() {
-        return "Hello, User!";
-    }
-
     @PostMapping("/upload")
-    public ResponseEntity<FileDetails> uploadFile(
-            @RequestParam MultipartFile file) {
-
+    public ResponseEntity<FileResponse> upload(@RequestParam MultipartFile file) {
         return ResponseEntity.ok(fileService.uploadFile(file));
     }
 
-    @GetMapping("/all")
-    public List<FileDetails> getAllFileDetails() {
-        return fileService.getAllFiles();
+    
+    @GetMapping("/me")
+    public ResponseEntity<List<FileResponse>> getMyFiles() {
+        return ResponseEntity.ok(fileService.getMyFiles());
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<FileDetails> getFileDetails(@PathVariable int id) {
-        return ResponseEntity.ok(fileService.getFileDetailsById(id));
-    }
-
-    @GetMapping("/download/{id}")
-    public ResponseEntity<Void> downloadFile(@PathVariable int id) {
-        String redirectUrl = fileService.getFileUrl(id);
-        return ResponseEntity.status(302)
-                .header("Location", redirectUrl)
-                .build();
+        var user = SecurityUtil.getCurrentUser().getUser();
+        return ResponseEntity.ok(fileService.getFileDetailsById(id, user));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteFile(@PathVariable int id) {
-        fileService.deleteFile(id);
+        var user = SecurityUtil.getCurrentUser().getUser();
+        fileService.deleteFile(id, user);
         return ResponseEntity.noContent().build();
     }
 }
