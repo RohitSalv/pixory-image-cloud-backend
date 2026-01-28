@@ -72,9 +72,16 @@ public class GeminiService {
         String cleanJson = text.replaceAll("(?s)```json\\s*|\\s*```", "").trim();
         JsonNode result = objectMapper.readTree(cleanJson);
 
+        List<String> rawTags = objectMapper.convertValue(result.get("tags"), List.class);
+        List<String> uniqueNormalizedTags = rawTags.stream()
+            .map(String::trim)
+            .map(String::toLowerCase)
+            .distinct()
+            .toList();
+
         return new GeminiResult(
             result.get("description").asText(),
-            objectMapper.convertValue(result.get("tags"), List.class)
+            uniqueNormalizedTags
         );
     }
 }

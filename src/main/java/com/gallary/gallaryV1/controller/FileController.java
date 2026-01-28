@@ -1,7 +1,10 @@
 package com.gallary.gallaryV1.controller;
 
+import java.io.IOException;
 import java.util.List;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -22,14 +25,20 @@ public class FileController {
     }
 
     @PostMapping("/upload")
-    public ResponseEntity<FileResponse> upload(@RequestParam MultipartFile file) {
+    public ResponseEntity<FileResponse> upload(@RequestParam MultipartFile file) throws IOException {
         return ResponseEntity.ok(fileService.uploadFile(file));
     }
 
-    
     @GetMapping("/me")
     public ResponseEntity<List<FileResponse>> getMyFiles() {
         return ResponseEntity.ok(fileService.getMyFiles());
+    }
+
+    @GetMapping("/search")
+    public ResponseEntity<Page<FileResponse>> searchFiles(
+            @RequestParam String query,
+            Pageable pageable) {
+        return ResponseEntity.ok(fileService.searchFiles(query, pageable));
     }
 
     @GetMapping("/{id}")
