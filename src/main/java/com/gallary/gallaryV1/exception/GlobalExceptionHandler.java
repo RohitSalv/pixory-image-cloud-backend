@@ -9,6 +9,8 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<String> handleRuntime(RuntimeException ex) {
+        // Log the full stack trace to the console for detailed debugging
+        ex.printStackTrace();
         return ResponseEntity.badRequest().body(ex.getMessage());
     }
 }

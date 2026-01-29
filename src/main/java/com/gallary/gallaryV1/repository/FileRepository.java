@@ -20,9 +20,9 @@ public interface FileRepository extends JpaRepository<FileDetails, Integer> {
 
     Optional<FileDetails> findByIdAndUser_Id(int id, int userId);
 
-    @Query("SELECT fd FROM FileDetails fd WHERE fd.user.id = :userId AND " +
+    @Query("SELECT DISTINCT fd FROM FileDetails fd LEFT JOIN fd.tags t WHERE fd.user.id = :userId AND " +
            "(LOWER(fd.description) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR " +
-           "LOWER(CAST(fd.tags as string)) LIKE LOWER(CONCAT('%', :searchTerm, '%')))")
+           "LOWER(t) LIKE LOWER(CONCAT('%', :searchTerm, '%')))")
     Page<FileDetails> searchByDescriptionOrTags(
             @Param("userId") int userId,
             @Param("searchTerm") String searchTerm,
