@@ -1,39 +1,22 @@
-HELP.md
+# Build artifacts
 target/
-.mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
 
-### STS ###
-.apt_generated
-.classpath
+# Maven
+.mvn/wrapper/maven-wrapper.jar
+
+# IDE specific
+.idea/
+.vscode/
 .factorypath
-.project
-.settings
 .springBeans
-.sts4-cache
 
-### IntelliJ IDEA ###
-.idea
-*.iws
-*.iml
-*.ipr
+# Logs
+*.log
+logs/
 
-### NetBeans ###
-/nbproject/private/
-/nbbuild/
-/dist/
-/nbdist/
-/.nb-gradle/
-build/
-!**/src/main/**/build/
-!**/src/test/**/build/
-
-### VS Code ###
-.vscode
-
+# Secrets / Environment-specific
 .env
 application-local.properties
 application-dev.properties
-
-

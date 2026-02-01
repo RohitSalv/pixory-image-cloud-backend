@@ -7,7 +7,6 @@ import java.util.Map;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -20,6 +19,7 @@ import com.gallary.gallaryV1.model.User;
 import com.gallary.gallaryV1.repository.FileRepository;
 import com.gallary.gallaryV1.repository.UserRepository;
 import com.gallary.gallaryV1.security.AuthUtil;
+import com.gallary.gallaryV1.exception.ResourceNotFoundException;
 
 import io.jsonwebtoken.io.IOException;
 
@@ -28,23 +28,20 @@ public class FileService {
 
     private final Cloudinary cloudinary;
     private final FileRepository fileRepository;
-    private final GeminiService geminiService;
-    private final ImageProcessor imageProcessor;
+    private final ImageAnalysisService imageAnalysisService;
     private final AuthUtil authUtil;
     private final UserRepository userRepository;
 
     public FileService(
             Cloudinary cloudinary,
             FileRepository fileRepository,
-            GeminiService geminiService,
-            ImageProcessor imageProcessor,
+            ImageAnalysisService imageAnalysisService,
             AuthUtil authUtil,
             UserRepository userRepository) {
 
         this.cloudinary = cloudinary;
         this.fileRepository = fileRepository;
-        this.geminiService = geminiService;
-        this.imageProcessor = imageProcessor;
+        this.imageAnalysisService = imageAnalysisService;
         this.authUtil = authUtil;
         this.userRepository = userRepository;
     }
@@ -70,7 +67,7 @@ public class FileService {
             FileDetails saved = fileRepository.save(details);
 
             // Trigger AI analysis in the background
-            processImageForAI(saved.getId(), originalBytes);
+            imageAnalysisService.processImageForAI(saved.getId(), originalBytes);
 
             return mapToDto(saved);
 
@@ -110,7 +107,7 @@ public class FileService {
 
     public FileDetails getFileDetailsById(int id, User user) {
         return fileRepository.findByIdAndUser_Id(id, user.getId())
-                .orElseThrow(() -> new RuntimeException("File not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("File not found with id: " + id));
     }
 
     public void deleteFile(int id, User user) {
@@ -127,39 +124,11 @@ public class FileService {
         fileRepository.delete(file);
     }
 
-    @Async
-    @Transactional
-    public void processImageForAI(int fileId, byte[] imageBytes) {
-        fileRepository.findById(fileId).ifPresent(fileDetails -> {
-            try {
-                GeminiResult aiResult = analyzeWithFallback(imageBytes);
-
-                fileDetails.setDescription(aiResult.getDescription());
-                fileDetails.setTags(new ArrayList<>(aiResult.getTags()));
-                fileRepository.save(fileDetails);
-            } catch (Exception e) {
-                System.err.println("Asynchronous AI analysis failed for fileId: " + fileId + " - " + e.getMessage());
-                fileDetails.setDescription("AI analysis failed: " + e.getMessage());
-                fileDetails.setTags(new ArrayList<>(List.of("analysis-failed")));
-                fileRepository.save(fileDetails);
-            }
-        });
-    }
-
     /* ---------- helpers ---------- */
 
     private void validateFile(MultipartFile file) {
         if (file == null || file.isEmpty()) {
             throw new RuntimeException("File is empty");
-        }
-    }
-
-    private GeminiResult analyzeWithFallback(byte[] originalBytes) {
-        try {
-            byte[] optimized = imageProcessor.resizeForAI(originalBytes);
-            return geminiService.analyzeImage(optimized);
-        } catch (Exception e) {
-            return new GeminiResult("Description pending", List.of("uploaded"));
         }
     }
 

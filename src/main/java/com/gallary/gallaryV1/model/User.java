@@ -53,11 +53,18 @@ public class User {
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 
-    @OneToMany(
-        mappedBy = "user",
-        fetch = FetchType.LAZY,
-        cascade = CascadeType.ALL,
-        orphanRemoval = true
-    )
+    @Column
+    private String resetToken;
+
+    @Column
+    private LocalDateTime resetTokenExpiry;
+
+    @Column(length = 500) // Increase length for JWT
+    private String refreshToken;
+
+    @Column
+    private LocalDateTime refreshTokenExpiry;
+
+    @OneToMany(mappedBy = "user", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     private List<FileDetails> files = new ArrayList<>();
 }
